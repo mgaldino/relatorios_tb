@@ -5,20 +5,20 @@ library(electionsBR)
 library(dplyr)
 
 ### ACT
-setwd("/Users/natalia/Documents/Manoel/reports/ACT/2014")
-# unzip("prestacao_final_2014.zip", exdir = paste0("./", 2014))
+setwd("/Users/natalia/Documents/Manoel/reports/ACT")
+unzip("prestacao_final_2014.zip", exdir = paste0("./", 2014))
 
 year <- 2014
-x <- list.files()
+# list.files()
 dir <- getwd()
 list.files(paste(dir, year, sep="/"))
 setwd(paste(dir, year, sep="/"))
 
-receitas_comites <-  tryCatch(read.table("receitas_comites_2014_brasil.txt", colClasses = "character", header = T, sep = ";", stringsAsFactors = F, fill = T,
-                                         fileEncoding = "windows-1252"), error = function(e) NULL)
-
-receitas_partidos <-  tryCatch(read.table("receitas_partidos_2014_brasil.txt",  colClasses = "character", header = T, sep = ";", stringsAsFactors = F, fill = T,
-                                          fileEncoding = "windows-1252"), error = function(e) NULL)
+# receitas_comites <-  tryCatch(read.table("receitas_comites_2014_brasil.txt", colClasses = "character", header = T, sep = ";", stringsAsFactors = F, fill = T,
+#                                          fileEncoding = "windows-1252"), error = function(e) NULL)
+# 
+# receitas_partidos <-  tryCatch(read.table("receitas_partidos_2014_brasil.txt",  colClasses = "character", header = T, sep = ";", stringsAsFactors = F, fill = T,
+#                                           fileEncoding = "windows-1252"), error = function(e) NULL)
 
 receitas_candidatos <-  tryCatch(read.table("receitas_candidatos_2014_brasil.txt",  colClasses = "character", header = T, sep = ";", stringsAsFactors = F, fill = T,
                                             fileEncoding = "windows-1252"), error = function(e) NULL)
@@ -33,6 +33,9 @@ despesas_partidos <-  tryCatch(read.table("despesas_partidos_2014_brasil.txt", c
 despesas_candidatos <-  tryCatch(read.table("despesas_partidos_2014_brasil.txt", colClasses = "character", header = T, sep = ";", stringsAsFactors = F, fill = T,
                                             fileEncoding = "windows-1252"), error = function(e) NULL)
 
+setwd("/Users/natalia/Documents/Manoel/reports/ACT/")
+save(receitas_candidatos, file="receitas_candidatos.RData")
+load("receitas_candidatos.RData")
 
 names(receitas_candidatos)
 names(receitas_partidos)
