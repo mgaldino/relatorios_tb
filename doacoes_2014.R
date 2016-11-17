@@ -50,9 +50,10 @@ valid_receita_candidatos <- receitas_candidatos %>%
 ### criando tabela doaçnoes totais por cnpj 2014
 setwd("/Users/natalia/Documents/Manoel/reports/ACT")
 
-lista_cnpjs <- read.table("lista_cnpjs_v2.csv", header=T, sep=",", 
-                          colClasses = c("numeric", "character", "character"))
+# lista_cnpjs <- read.table("lista_cnpjs_v2.csv", header=T, sep=",", 
+#                           colClasses = c("numeric", "character", "character"))
 
+lista_cnpjs <- load("lista_cnpjs_v3.RData")
 
 idx <- which(names(receitas_candidatos) %in% c("CPF.do.candidato", "CPF.CNPJ.do.doador.originário","CPF.CNPJ.do.doador.originário",
                                                "CPF.CNPJ.do.doador", "UF", "Sigla..Partido", "Cargo","Valor.receita"))
