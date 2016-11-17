@@ -131,6 +131,14 @@ n_cand <- doadores_2014_full_bg %>%  # info_depfed_2014 doadores_2014_full_bg
   filter(Cargo == "Deputado Federal") %>%
   summarise(n_cand = n_distinct(CPF.do.candidato))
 
+n_fav_dep <- candidatos_fav %>%
+  filter(Cargo == "Deputado Federal") %>%
+  summarise(n = n_distinct(CPF.do.candidato))
+
+n_fav_eleito_dep <- candidatos_fav %>%
+  filter(Cargo == "Deputado Federal", bol_status_eleito == "eleito") %>%
+  summarise(n = n_distinct(CPF.do.candidato))
+
 df2_tmp <- candidatos_fav %>%
   filter(Cargo == "Deputado Federal") %>%
   group_by(agrupador) %>%
@@ -148,11 +156,12 @@ df2 <- df2_tmp %>%
 
 df2_1 <- bind_rows(df2,
           data.frame(agrupador = "total_favorecidos",
-                     dep_favorecidos = sum(df2$dep_favorecidos),
-                     dep_eleitos = sum(df2$dep_eleitos)),
+                     dep_favorecidos = n_fav_dep$n,
+                     dep_eleitos = n_fav_eleito_dep$n),
           data.frame(agrupador = "total_candidatos",
-                     dep_favorecidos = round(sum(df2$dep_favorecidos)/n_cand$n_cand,2),
-                     dep_eleitos = round(sum(df2$dep_eleitos)/513,2))) 
+                     dep_favorecidos = round(n_fav_dep$n/n_cand$n_cand, 2),
+                     dep_eleitos = round(n_fav_eleito_dep$n/513,2)))
+
 
 setwd("C:/Users/mgaldino/2016/ACT/tabelas")
 write.table(df2_1, file="tabela_2.csv", sep=";", row.names=F)
@@ -163,6 +172,15 @@ write.table(df2_1, file="tabela_2.csv", sep=";", row.names=F)
 n_cand_senador <- doadores_2014_full_bg %>%  # info_depfed_2014 doadores_2014_full_bg
   filter(Cargo == "Senador") %>%
   summarise(n_cand = n_distinct(CPF.do.candidato))
+
+n_fav_sendador <- candidatos_fav %>%
+  filter(Cargo == "Senador") %>%
+  summarise(n = n_distinct(CPF.do.candidato))
+
+n_fav_eleito_sendador <- candidatos_fav %>%
+  filter(Cargo == "Senador", bol_status_eleito == "eleito") %>%
+  summarise(n = n_distinct(CPF.do.candidato))
+
 
 df3_tmp <- candidatos_fav %>%
   filter(Cargo == "Senador") %>%
@@ -180,11 +198,14 @@ df3 <- df3_tmp %>%
 
 df3_1 <- bind_rows(df3,
                    data.frame(agrupador = "total_favorecidos",
-                              sen_favorecidos = sum(df3$sen_favorecidos),
-                              sen_eleitos = sum(df3$sen_eleitos)),
+                              sen_favorecidos = n_fav_sendador$n,
+                              sen_eleitos = n_fav_eleito_sendador$n),
                    data.frame(agrupador = "total_candidatos",
-                              sen_favorecidos = round(sum(df3$sen_favorecidos)/n_cand_senador$n_cand,2),
-                              sen_eleitos = round(sum(df3$sen_eleitos)/27,2))) 
+                              sen_favorecidos = round(n_fav_sendador$n/n_cand_senador$n_cand,2),
+                              sen_eleitos = round(n_fav_eleito_sendador$n/27, 2)))
+
+
+
 
 setwd("C:/Users/mgaldino/2016/ACT/tabelas")
 write.table(df3_1, file="tabela_3.csv", sep=";", row.names=F)
