@@ -73,10 +73,19 @@ chart1 <- df1 %>%
            geom_bar(stat = "identity", position = position_dodge()) +
   geom_text(size = 3, position = position_dodge(width = 0.9), 
             vjust= -.5,check_overlap = TRUE) +
-  theme_tb(base_family = "Garamond" ) + ylab("R$ milhões") + xlab("") +
-  scale_y_continuous(labels = real_format()) + ylim(0, 100)
+  theme_tb(base_family = "Helvetica" , legend_size = 8) + ylab("R$ milhões") + xlab("") +
+  scale_y_continuous(labels = real_format()) + ylim(0, 100) +  
+  scale_colour_manual(values = c("#ffb959","#406fef")) 
   
-ggsave("grafico1.bmp", chart1, scale=.6, height = 6, width = 10, family="Garamond" )
+# #ffb959 #406fef pro senador
+  
+  ## cinza e azul nos stacked
+
+ggsave("grafico1.bmp", chart1, scale=.6, height = 6, width = 10, family="Helvetica" )
+
+
+
+## chart 2
 
 ## apenas pra dep. federal
 doacoes_2014 <- doadores_2014 %>%
