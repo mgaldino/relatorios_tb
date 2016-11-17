@@ -6,6 +6,7 @@ library(dplyr)
 library(ggplot2)
 library(scales)
 library(extrafont)
+library(tidyr)
 loadfonts(device="win")
 
 
@@ -68,20 +69,21 @@ info_depfed_2014_final <- info_depfed_2014 %>%
 
 info_depfed_senador_2014 <- info_depfed_2014_final %>%
   filter(DESCRICAO_CARGO %in% c("DEPUTADO FEDERAL", "SENADOR", "2º SUPLENTE", "1º SUPLENTE"),
-         DES_SITUACAO_CANDIDATURA %in% c("DEFERIDO", "DEFERIDO COM RECURSO", "INDEFERIDO COM RECURSO"))
+         DES_SITUACAO_CANDIDATURA %in% c("DEFERIDO", "DEFERIDO COM RECURSO"))
 
 # nrow(info_depfed_senador_2014) == length(unique(info_depfed_senador_2014$CPF_CANDIDATO))
 
 doadores_2014_full_bg <- doadores_2014_full %>%
-  full_jojn(info_depfed_senador_2014, by = c("CPF.do.candidato" = "CPF_CANDIDATO"))
+  left_join(info_depfed_senador_2014, by = c("CPF.do.candidato" = "CPF_CANDIDATO"))
 
-length(unique(doadores_2014_full$CPF.do.candidato))
- 
+## depois calcular quanto foi doado pelas empresas para candidatos em outras situações (indeferido etc.)
+
 ######################################
-### Gráfico s Tabelas do doc
+### Gráficos Tabelas do doc
 ######################################
 
 setwd("C:/Users/mgaldino/2016/ACT/charts")
+
 ### Gráfico 1
 df1 <- doadores_2014_full %>%
   filter(!is.na(agrupador), Cargo %in% c("Deputado Federal", "Senador")) %>%
@@ -118,8 +120,74 @@ ggsave("grafico1_alternativa.bmp", chart1_alternativo, scale=.8, height = 6, wid
 
 ### Tabela 2 CANDIDATOS ELEITOS FAVORECIDOS – CONGRESSO 2014
 
+candidatos_fav <- doadores_2014_full_bg %>%
+  mutate(bol_status_eleito = 
+           ifelse(DESC_SIT_TOT_TURNO %in% c( "ELEITO POR QP", "ELEITO POR MÉDIA", "ELEITO"), 
+                  "eleito", "nao_eleito")) %>%
+  filter(!is.na(agrupador)) 
+
+# número de candidatos deferidos com prestação de contas (arrecadou algum real)
+n_cand <- doadores_2014_full_bg %>%  # info_depfed_2014 doadores_2014_full_bg
+  filter(Cargo == "Deputado Federal") %>%
+  summarise(n_cand = n_distinct(CPF.do.candidato))
+
+df2_tmp <- candidatos_fav %>%
+  filter(Cargo == "Deputado Federal") %>%
+  group_by(agrupador) %>%
+  summarise(dep_favorecidos = n_distinct(CPF.do.candidato))
+
+df2_tmp1 <- candidatos_fav %>%
+  filter(Cargo == "Deputado Federal", bol_status_eleito == "eleito") %>%
+  group_by(agrupador) %>%
+  summarise(dep_eleitos = n_distinct(CPF.do.candidato))
+
+df2 <- df2_tmp %>%
+  inner_join(df2_tmp1, by="agrupador")
 
 
+
+df2_1 <- bind_rows(df2,
+          data.frame(agrupador = "total_favorecidos",
+                     dep_favorecidos = sum(df2$dep_favorecidos),
+                     dep_eleitos = sum(df2$dep_eleitos)),
+          data.frame(agrupador = "total_candidatos",
+                     dep_favorecidos = round(sum(df2$dep_favorecidos)/n_cand$n_cand,2),
+                     dep_eleitos = round(sum(df2$dep_eleitos)/513,2))) 
+
+setwd("C:/Users/mgaldino/2016/ACT/tabelas")
+write.table(df2_1, file="tabela_2.csv", sep=";", row.names=F)
+
+## tabela 3 senadores favorecidos
+
+# número de candidatos deferidos com prestação de contas (arrecadou algum real)
+n_cand_senador <- doadores_2014_full_bg %>%  # info_depfed_2014 doadores_2014_full_bg
+  filter(Cargo == "Senador") %>%
+  summarise(n_cand = n_distinct(CPF.do.candidato))
+
+df3_tmp <- candidatos_fav %>%
+  filter(Cargo == "Senador") %>%
+  group_by(agrupador) %>%
+  summarise(sen_favorecidos = n_distinct(CPF.do.candidato))
+
+df3_tmp1 <- candidatos_fav %>%
+  filter(Cargo == "Senador", bol_status_eleito == "eleito") %>%
+  group_by(agrupador) %>%
+  summarise(sen_eleitos = n_distinct(CPF.do.candidato))
+
+df3 <- df3_tmp %>%
+  inner_join(df3_tmp1, by="agrupador")
+
+
+df3_1 <- bind_rows(df3,
+                   data.frame(agrupador = "total_favorecidos",
+                              sen_favorecidos = sum(df3$sen_favorecidos),
+                              sen_eleitos = sum(df3$sen_eleitos)),
+                   data.frame(agrupador = "total_candidatos",
+                              sen_favorecidos = round(sum(df3$sen_favorecidos)/n_cand_senador$n_cand,2),
+                              sen_eleitos = round(sum(df3$sen_eleitos)/27,2))) 
+
+setwd("C:/Users/mgaldino/2016/ACT/tabelas")
+write.table(df3_1, file="tabela_3.csv", sep=";", row.names=F)
 
 ## 2010
 setwd("/Users/natalia/Documents/Manoel/reports/ACT")
