@@ -69,23 +69,35 @@ df1 <- doadores_2014_full %>%
   mutate(doacao_texto = gsub( "\\.", "," , as.character(round(doacao, 1))))
 
 chart1 <- df1 %>%
-  ggplot(aes(x=agrupador , y=doacao, fill = Cargo, label = doacao_texto)) + 
-           geom_bar(stat = "identity", position = position_dodge()) +
+  ggplot(aes(x=reorder(agrupador, -doacao) , y=doacao, fill = Cargo, label = doacao_texto)) + 
+           geom_bar(stat = "identity", position = position_dodge(width = 0.9), width=0.8) +
   geom_text(size = 3, position = position_dodge(width = 0.9), 
             vjust= -.5,check_overlap = TRUE) +
   theme_tb(base_family = "Helvetica" , legend_size = 8) + ylab("R$ milhões") + xlab("") +
   scale_y_continuous(labels = real_format()) + ylim(0, 100) +  
-  scale_colour_manual(values = c("#ffb959","#406fef")) 
-  
-# #ffb959 #406fef pro senador
+  scale_fill_manual(values = c("#ffb959","#406fef")) 
+
+chart1_alternativo <- df1 %>%
+  ggplot(aes(x=reorder(agrupador, -doacao) , y=doacao, label = doacao_texto)) + 
+  geom_bar(stat = "identity", fill= "#406fef", colour= "#406fef") +
+  geom_text(size = 3, vjust= -.5,check_overlap = TRUE) +
+  facet_grid(. ~ Cargo) +
+  theme_tb(base_family = "Helvetica" , legend_size = 8) + ylab("R$ milhões") + xlab("") +
+  scale_y_continuous(labels = real_format()) + ylim(0, 100)
+
   
   ## cinza e azul nos stacked
 
 ggsave("grafico1.bmp", chart1, scale=.6, height = 6, width = 10, family="Helvetica" )
 
+ggsave("grafico1_alternativa.bmp", chart1_alternativo, scale=.8, height = 6, width = 10, family="Helvetica" )
+
+## chart 2 Total doado pelos conglomerados – 2010 e 2014
 
 
-## chart 2
+### Tabela 2
+
+
 
 ## apenas pra dep. federal
 doacoes_2014 <- doadores_2014 %>%
