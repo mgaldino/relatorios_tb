@@ -204,7 +204,56 @@ df3_1 <- bind_rows(df3,
                               sen_favorecidos = round(n_fav_sendador$n/n_cand_senador$n_cand,2),
                               sen_eleitos = round(n_fav_eleito_sendador$n/27, 2)))
 
+## GRÁFICO 3 - EFETIVIDADE DOAÇÕES DE CAMPANHA - DEPUTADOS FEDERAIS (2014)
 
+df_chart3 <- df2_1 %>%
+  mutate(efetividade = dep_eleitos/dep_favorecidos,
+         efetividade_texto = 
+           paste(gsub( "\\.", "," , as.character(100*round(efetividade, 2))), "%", sep="")) %>%
+  slice(-(7:8)) %>%
+  mutate(cargo = "Deputado Federal")
+
+df_chart3_alt <- bind_rows(df_chart3,
+df3_1 %>%
+  mutate(efetividade = sen_eleitos/sen_favorecidos,
+         efetividade_texto = 
+           paste(gsub( "\\.", "," , as.character(100*round(efetividade, 2))), "%", sep="")) %>%
+  slice(-(7:8)) %>%
+  mutate(cargo = "Senador"))
+
+chart3_alternativo <- df_chart3_alt %>%
+  ggplot(aes(x=reorder(agrupador, -efetividade) , y=efetividade, label = efetividade_texto)) + 
+  geom_bar(stat = "identity", fill= "#406fef", colour= "#406fef") +
+  geom_text(size = 3, vjust= -.5,check_overlap = TRUE) +
+  facet_grid(. ~ cargo) +
+  theme_tb(base_family = "Helvetica" , legend_size = 8) + ylab("Efetividade de candidatos eleitos") + xlab("") +
+  scale_y_continuous(labels = percent, limits = c(0, 1))
+
+df3_main <- candidatos_fav %>%
+  filter(Cargo %in% c("Senador", "Deputado Federal")) %>%
+  group_by(Cargo, agrupador, bol_status_eleito) %>%
+  summarise(doacoes = sum(Valor.receita)/1e6) %>%
+  ungroup() %>%
+  mutate(efetividade_texto = 
+           gsub( "\\.", "," , as.character(round(doacoes, 1))))
+           
+chart3_main <- df3_main %>%
+  filter(Cargo == "Deputado Federal") %>%
+  ggplot(aes(x=reorder(agrupador, -doacoes) , y=doacoes, fill=bol_status_eleito, label = efetividade_texto)) + 
+  geom_bar(stat = "identity") + #, fill= "#406fef", colour= "#406fef") +
+  geom_text(size = 3, vjust= -.5, check_overlap = TRUE) +
+  theme_tb(base_family = "Helvetica" , legend_size = 8) +
+  ylab("Efetividade em milhões") + xlab("") +
+  scale_y_continuous(labels = real_format()) 
+
+chart4_main <- df3_main %>%
+  filter(Cargo == "Senador") %>%
+  ggplot(aes(x=reorder(agrupador, -doacoes) , y=doacoes, fill=bol_status_eleito, label = efetividade_texto)) + 
+  geom_bar(stat = "identity") + #, fill= "#406fef", colour= "#406fef") +
+  geom_text(size = 3, vjust= -1, check_overlap = F) +
+  theme_tb(base_family = "Helvetica" , legend_size = 8) +
+  ylab("Efetividade em milhões") + xlab("") +
+  scale_y_continuous(labels = real_format()) 
 
 
 setwd("C:/Users/mgaldino/2016/ACT/tabelas")
