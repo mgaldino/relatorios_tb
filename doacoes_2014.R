@@ -3,76 +3,80 @@
 
 library(electionsBR)
 library(dplyr)
+library(ggplot2)
+library(scales)
+library(extrafont)
+loadfonts(device="win")
+
+
 
 ### ACT
-setwd("/Users/natalia/Documents/Manoel/reports/ACT")
-unzip("prestacao_final_2014.zip", exdir = paste0("./", 2014))
+setwd("C:/Users/mgaldino/2016/ACT/arquivos/prestacao_final_2014")
 
-year <- 2014
-# list.files()
-dir <- getwd()
-list.files(paste(dir, year, sep="/"))
-setwd(paste(dir, year, sep="/"))
 
-# receitas_comites <-  tryCatch(read.table("receitas_comites_2014_brasil.txt", colClasses = "character", header = T, sep = ";", stringsAsFactors = F, fill = T,
-#                                          fileEncoding = "windows-1252"), error = function(e) NULL)
-# 
-# receitas_partidos <-  tryCatch(read.table("receitas_partidos_2014_brasil.txt",  colClasses = "character", header = T, sep = ";", stringsAsFactors = F, fill = T,
-#                                           fileEncoding = "windows-1252"), error = function(e) NULL)
+# receitas_candidatos <-  tryCatch(read.table("receitas_candidatos_2014_brasil.txt",  colClasses = "character", header = T, sep = ";",
+#                                             stringsAsFactors = F, fill = T))
 
-receitas_candidatos <-  tryCatch(read.table("receitas_candidatos_2014_brasil.txt",  colClasses = "character", header = T, sep = ";", stringsAsFactors = F, fill = T,
-                                            fileEncoding = "windows-1252"), error = function(e) NULL)
-gc()
-  
-despesas_comites <-  tryCatch(read.table("despesas_comites_2014_brasil.txt", colClasses = "character", header = T, sep = ";", stringsAsFactors = F, fill = T,
-                                         fileEncoding = "windows-1252"), error = function(e) NULL)
-
-despesas_partidos <-  tryCatch(read.table("despesas_partidos_2014_brasil.txt", colClasses = "character", header = T, sep = ";", stringsAsFactors = F, fill = T,
-                                          fileEncoding = "windows-1252"), error = function(e) NULL)
-
-despesas_candidatos <-  tryCatch(read.table("despesas_partidos_2014_brasil.txt", colClasses = "character", header = T, sep = ";", stringsAsFactors = F, fill = T,
-                                            fileEncoding = "windows-1252"), error = function(e) NULL)
-
-setwd("/Users/natalia/Documents/Manoel/reports/ACT/")
-save(receitas_candidatos, file="receitas_candidatos.RData")
+setwd("C:/Users/mgaldino/2016/ACT/arquivos")
+# save(receitas_candidatos, file="receitas_candidatos.RData")
 load("receitas_candidatos.RData")
 
-names(receitas_candidatos)
-names(receitas_partidos)
-names(receitas_comites)
 
-## validando que receitas batem por candidato, comite e partido
-valid_receita_candidatos <- receitas_candidatos %>%
-  mutate(Valor.receita = as.numeric(Valor.receita)) %>%
-  group_by(Cargo, UF, CPF.do.candidato, Sigla..Partido) %>%
-  summarise(receita = sum(Valor.receita, na.rm=T))
 
 ### criando tabela doaçnoes totais por cnpj 2014
-setwd("/Users/natalia/Documents/Manoel/reports/ACT")
+setwd("C:/Users/mgaldino/2016/ACT/arquivos")
 
 # lista_cnpjs <- read.table("lista_cnpjs_v2.csv", header=T, sep=",", 
 #                           colClasses = c("numeric", "character", "character"))
 
-lista_cnpjs <- load("lista_cnpjs_v3.RData")
+load(file="lista_cnpjs_v3.RData")
+
+lista_cnpjs <- tabela_empresas
+rm(tabela_empresas)
+
+lista_cnpjs <- lista_cnpjs %>%
+  distinct(CNPJ, .keep_all = T)
 
 idx <- which(names(receitas_candidatos) %in% c("CPF.do.candidato", "CPF.CNPJ.do.doador.originário","CPF.CNPJ.do.doador.originário",
-                                               "CPF.CNPJ.do.doador", "UF", "Sigla..Partido", "Cargo","Valor.receita"))
+                                               "CPF.CNPJ.do.doador", "UF", "Sigla..Partido", "Cargo", "Nome.candidato", "Valor.receita"))
 
-doadores_2014_secundario <- lista_cnpjs %>%
-  inner_join(select(receitas_candidatos, idx), by = c("CNPJ" = "CPF.CNPJ.do.doador.originário"))
+receitas_candidatos <- receitas_candidatos %>%
+  select(idx)
 
-doadores_2014_secundario <- doadores_2014_secundario%>%
-  select(-(ncol(dadores_2014_secundario)-1))
+receitas_candidatos <- receitas_candidatos %>%
+  mutate(CNPJ = ifelse(CPF.CNPJ.do.doador.originário == "#NULO", CPF.CNPJ.do.doador,
+                       ifelse(CPF.CNPJ.do.doador %in% lista_cnpjs$CNPJ, CPF.CNPJ.do.doador, CPF.CNPJ.do.doador.originário)))
+
+doadores_2014_full <- receitas_candidatos %>%
+  left_join(lista_cnpjs, by = "CNPJ") 
+
+doadores_2014_full <- doadores_2014_full %>%
+  mutate(Valor.receita = as.numeric(gsub(",", "\\.", Valor.receita)))
+
+summary(doadores_2014_full$Valor.receita)
 
 
-doadores_2014_primario <- lista_cnpjs %>%
-  inner_join(select(receitas_candidatos, idx), by = c("CNPJ" = "CPF.CNPJ.do.doador")) 
+######################################
+### Gráfico s Tabelas do doc
+######################################
 
-doadores_2014_primario <- doadores_2014_primario %>%
-  select(-ncol(doadores_2014_primario))
+setwd("C:/Users/mgaldino/2016/ACT/charts")
+### Gráfico 1
+df1 <- doadores_2014_full %>%
+  filter(!is.na(agrupador), Cargo %in% c("Deputado Federal", "Senador")) %>%
+  group_by(Cargo, agrupador) %>%
+  summarise(doacao = sum(Valor.receita)/1e6) %>%
+  mutate(doacao_texto = gsub( "\\.", "," , as.character(round(doacao, 1))))
 
-
-doadores_2014 <- bind_rows(doadores_2014_secundario, doadores_2014_primario)
+chart1 <- df1 %>%
+  ggplot(aes(x=agrupador , y=doacao, fill = Cargo, label = doacao_texto)) + 
+           geom_bar(stat = "identity", position = position_dodge()) +
+  geom_text(size = 3, position = position_dodge(width = 0.9), 
+            vjust= -.5,check_overlap = TRUE) +
+  theme_tb(base_family = "Garamond" ) + ylab("R$ milhões") + xlab("") +
+  scale_y_continuous(labels = real_format()) + ylim(0, 100)
+  
+ggsave("grafico1.bmp", chart1, scale=.6, height = 6, width = 10, family="Garamond" )
 
 ## apenas pra dep. federal
 doacoes_2014 <- doadores_2014 %>%
