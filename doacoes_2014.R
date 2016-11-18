@@ -54,12 +54,14 @@ doadores_2014_full <- receitas_candidatos %>%
 doadores_2014_full <- doadores_2014_full %>%
   mutate(Valor.receita = as.numeric(gsub(",", "\\.", Valor.receita)))
 
-summary(doadores_2014_full$Valor.receita)
-
 
 ### Tabela eleito e nao-eleito 2014
 
-info_depfed_2014 <- candidate_fed1(2014)
+# info_depfed_2014 <- candidate_fed1(2014)
+# save(info_depfed_2014, file="info_depfed_2014.RData")
+
+load("info_depfed_2014.RData")
+
 
 info_depfed_2014_final <- info_depfed_2014 %>%
   select(which(names(.) %in% c("CPF_CANDIDATO", "DESCRICAO_CARGO" , "DES_SITUACAO_CANDIDATURA", "DESCRICAO_SEXO",
@@ -204,7 +206,7 @@ df3_1 <- bind_rows(df3,
                               sen_favorecidos = round(n_fav_sendador$n/n_cand_senador$n_cand,2),
                               sen_eleitos = round(n_fav_eleito_sendador$n/27, 2)))
 
-## GRÁFICO 3 - EFETIVIDADE DOAÇÕES DE CAMPANHA - DEPUTADOS FEDERAIS (2014)
+## GRÁFICO 3 e 4 - EFETIVIDADE DOAÇÕES DE CAMPANHA - DEPUTADOS FEDERAIS e Senadores (2014)
 
 df_chart3 <- df2_1 %>%
   mutate(efetividade = dep_eleitos/dep_favorecidos,
@@ -226,8 +228,12 @@ chart3_alternativo <- df_chart3_alt %>%
   geom_bar(stat = "identity", fill= "#406fef", colour= "#406fef") +
   geom_text(size = 3, vjust= -.5,check_overlap = TRUE) +
   facet_grid(. ~ cargo) +
-  theme_tb(base_family = "Helvetica" , legend_size = 8) + ylab("Efetividade de candidatos eleitos") + xlab("") +
+  theme_tb(base_family = "Helvetica" , legend_size = 8) + ylab("Efetividade candidatos eleitos") + xlab("") +
   scale_y_continuous(labels = percent, limits = c(0, 1))
+
+setwd("C:/Users/mgaldino/2016/ACT/charts")
+ggsave("grafico3_alternativo.bmp", chart3_alternativo, scale=.8, height = 8, width = 12, family="Helvetica" )
+
 
 df3_main <- candidatos_fav %>%
   filter(Cargo %in% c("Senador", "Deputado Federal")) %>%
@@ -240,7 +246,7 @@ df3_main <- candidatos_fav %>%
 chart3_main <- df3_main %>%
   filter(Cargo == "Deputado Federal") %>%
   ggplot(aes(x=reorder(agrupador, -doacoes) , y=doacoes, fill=bol_status_eleito, label = efetividade_texto)) + 
-  geom_bar(stat = "identity") + #, fill= "#406fef", colour= "#406fef") +
+  geom_bar(stat = "identity") + #, fill= c("#406fef", "#ffb959"), colour= "#406fef") +
   geom_text(size = 3, vjust= -.5, check_overlap = TRUE) +
   theme_tb(base_family = "Helvetica" , legend_size = 8) +
   ylab("Efetividade em milhões") + xlab("") +
@@ -256,11 +262,102 @@ chart4_main <- df3_main %>%
   scale_y_continuous(labels = real_format()) 
 
 
-setwd("C:/Users/mgaldino/2016/ACT/tabelas")
-write.table(df3_1, file="tabela_3.csv", sep=";", row.names=F)
+#### Chart 5  e tabela 4 distribution of donoations
+df5 <- candidatos_fav %>%
+  filter(bol_status_eleito == "eleito") %>%
+  group_by(CPF.do.candidato, agrupador) %>%
+  summarise(receita = sum(Valor.receita),
+            receita_milhoes = round(receita/1e6, 2)) %>%
+  ungroup() %>%
+  group_by(agrupador) %>%
+  mutate( decile = ntile(receita, 10),
+          total_doado = sum(receita)) %>%
+  ungroup() %>%
+  mutate(agrupador = reorder(agrupador, total_doado)) 
+          
 
+
+chart5_v2 <- df5 %>%
+  ggplot(aes(x= decile , y=receita_milhoes)) + 
+  stat_summary(fun.y=mean, geom="bar") +
+  scale_x_continuous(breaks= seq(1, 10, 2)+1)  +
+  facet_grid(. ~ agrupador, scales = "free_y")  +
+  theme_tb(base_family = "Helvetica" , legend_size = 8) + ylab("Doação média por decil em R$ milhões") + xlab("decil")
+
+ggsave("grafico5_decil_v3.bmp", chart5_v2, scale=.8, height = 8, width = 12, family="Helvetica" )
+
+### Tabela 5 5 DEPUTADOS FEDERAIS MAIS BENEFICIADOS COM DOAÇÕES DE CAMPANHAR POR GRUPOS ALIMENTÍCIOS 
+
+df_tab5 <-  candidatos_fav %>%
+  filter(bol_status_eleito == "eleito") %>%
+  group_by(CPF.do.candidato, SIGLA_PARTIDO, SIGLA_UE, Nome.candidato, agrupador) %>%
+  summarise(receita = sum(Valor.receita),
+            receita_milhoes = round(receita/1e6, 2)) %>%
+  ungroup() %>%
+  group_by(agrupador) %>%
+  mutate(q3 = quantile(receita, .75),
+         q1 = quantile(receita, .25),
+         outlier_status = ifelse(receita > q3 + 1.5*(q3-q1), "outlier", "normal")) %>%
+  filter(outlier_status == "outlier") %>%
+  select(1, 5, 4, 2, 3, 6)
+
+# doações totais dos favorecidos
+
+candidatos_fav_all <- candidatos_fav %>%
+  distinct(CPF.do.candidato, .keep_all = T) %>%
+  inner_join(select(doadores_2014_full_bg, c(5, 7, 11)), by = "CPF.do.candidato") %>%
+  group_by(CPF.do.candidato) %>%
+  summarise(receita_total = sum(Valor.receita.y))
+
+df_tab5_final <- df_tab5 %>%
+  inner_join(candidatos_fav_all, by="CPF.do.candidato")
+
+setwd("C:/Users/mgaldino/2016/ACT/tabelas")
+
+write.table(df_tab5_final, file="tabela_5.csv", sep=";", row.names=F)
+
+
+## Tabela 7 Hugo
+
+df7 <-  candidatos_fav %>%
+  filter(bol_status_eleito == "eleito") %>%
+  group_by(SIGLA_PARTIDO,  agrupador, Cargo) %>%
+  summarise(receita = sum(Valor.receita)) %>%
+              spread(agrupador, receita, fill = 0)
+
+# tabela 8 Hugo
+df8 <-  candidatos_fav %>%
+  filter(bol_status_eleito == "eleito") %>%
+  group_by(SIGLA_UE,  Cargo) %>%
+  summarise(receita = sum(Valor.receita), num_congressistas = n_distinct(CPF.do.candidato)) 
+
+
+setwd("C:/Users/mgaldino/2016/ACT/tabelas")
+write.table(df8, file="tabela_8_hugo.csv", sep=";", row.names=F)
+
+##  tabela doações totais Jéssica
+
+total_tudo <- sum(doadores_2014_full$Valor.receita)
+
+df_jessica <- doadores_2014_full %>%
+  group_by(agrupador) %>%
+  summarise(total_doacoes = sum(Valor.receita)) %>%
+  ungroup() %>%
+  mutate(total_tudo = total_tudo,
+         perc_total = total_doacoes/total_tudo)
+
+df_jessica$agrupador[is.na(df_jessica$agrupador)] <- "outras doações"
+
+setwd("C:/Users/mgaldino/2016/ACT/tabelas")
+write.table(df_jessica, file="tabela2014_jessica.csv", sep=";", row.names=F)
+
+
+## http://sunlightfoundation.com/2013/06/24/1pct_of_the_1pct/
+## alternativa: classificar as doações em percentil
 ## 2010
+
 setwd("/Users/natalia/Documents/Manoel/reports/ACT")
+
 
 doacoes_cand_2010 <- read.table("doacoes_empresas_candidatos.csv",
                            header=T, sep=",", colClasses= "character")
