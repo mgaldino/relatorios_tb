@@ -352,45 +352,4 @@ setwd("C:/Users/mgaldino/2016/ACT/tabelas")
 write.table(df_jessica, file="tabela2014_jessica.csv", sep=";", row.names=F)
 
 
-## http://sunlightfoundation.com/2013/06/24/1pct_of_the_1pct/
-## alternativa: classificar as doações em percentil
-## 2010
 
-setwd("/Users/natalia/Documents/Manoel/reports/ACT")
-
-
-doacoes_cand_2010 <- read.table("doacoes_empresas_candidatos.csv",
-                           header=T, sep=",", colClasses= "character")
-
-
-doacoes_2010 <- doacoes_cand_2010 %>%
-  mutate(montante = as.numeric(montante)) %>%
-  group_by(cgc) %>%
-  summarise(receita = sum(montante, na.rm=T),
-            nome = max(nome_doador))
-
-View(doacoes_2010)
-
-## por cnpj e por cargo
-doacoes_2010_2014_c <- doacoes_2010 %>%
-  full_join(doacoes_2014_c, by = c("cgc" = "CNPJ")) %>%
-  full_join(lista_cnpjs, by = c("cgc" = "CNPJ") ) %>%
-  rename( cnpj = cgc, receita_2010 = receita.x, receita_2014 = receita.y,
-          agrupador_empresa = agrupador_empresa.y, cargo2014 = Cargo) %>%
-  select(which(names(.) %in% c("cnpj", "receita_2010", "receita_2014",
-                               "agrupador_empresa", "cargo2014"))) %>%
-  mutate(receita_2010 = replace(receita_2010, is.na(receita_2010), 0),
-         receita_2014 = replace(receita_2014, is.na(receita_2014), 0)) %>%
-  distinct(cnpj, .keep_all = T)
-
-
-
-
-
-
-doadores_2014_info <- doadores_2014 %>%
-  full_join(info_depfed_2014_final, by = c("CPF.do.candidato" = "CPF_CANDIDATO"))
-
-setwd("/Users/natalia/Documents/Manoel/reports/ACT")
-write.table(doadores_2014_info, file = "info_background_candidatos_doadores_2014.csv", sep=";",
-            row.names = F)
