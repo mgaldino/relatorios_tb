@@ -12,7 +12,7 @@ loadfonts(device="win")
 
 
 ### ACT
-setwd("C:/Users/mgaldino/2016/ACT/arquivos/prestacao_final_2014")
+# setwd("C:/Users/mgaldino/2016/ACT/arquivos/prestacao_final_2014")
 
 
 # receitas_candidatos <-  tryCatch(read.table("receitas_candidatos_2014_brasil.txt",  colClasses = "character", header = T, sep = ";",
@@ -78,7 +78,7 @@ info_depfed_senador_2014 <- info_depfed_2014_final %>%
 doadores_2014_full_bg <- doadores_2014_full %>%
   left_join(info_depfed_senador_2014, by = c("CPF.do.candidato" = "CPF_CANDIDATO"))
 
-## depois calcular quanto foi doado pelas empresas para candidatos em outras situações (indeferido etc.)
+
 
 ######################################
 ### Gráficos Tabelas do doc
@@ -232,34 +232,73 @@ chart3_alternativo <- df_chart3_alt %>%
   scale_y_continuous(labels = percent, limits = c(0, 1))
 
 setwd("C:/Users/mgaldino/2016/ACT/charts")
-ggsave("grafico3_alternativo.bmp", chart3_alternativo, scale=.8, height = 8, width = 12, family="Helvetica" )
+ggsave("grafico3_alternativo.bmp", chart3_alternativo, scale=.7, height = 8, width = 12, family="Helvetica" )
 
 
 df3_main <- candidatos_fav %>%
-  filter(Cargo %in% c("Senador", "Deputado Federal")) %>%
+  filter(Cargo == "Deputado Federal") %>%
+  mutate(bol_status_eleito = 
+           ifelse(bol_status_eleito == "eleito", "Deputados Eleitos", "Deputados não eleitos")) %>%
   group_by(Cargo, agrupador, bol_status_eleito) %>%
   summarise(doacoes = sum(Valor.receita)/1e6) %>%
   ungroup() %>%
   mutate(efetividade_texto = 
            gsub( "\\.", "," , as.character(round(doacoes, 1))))
-           
+
+df3_annotate <- df3_main %>%
+  filter(Cargo == "Deputado Federal") %>%
+  select(c(2,3, 4)) %>%
+  spread(bol_status_eleito, doacoes) %>%
+  mutate( total = `Deputados Eleitos` + `Deputados não eleitos`,
+          perc = round(`Deputados Eleitos` / total, 2))
+  
 chart3_main <- df3_main %>%
   filter(Cargo == "Deputado Federal") %>%
   ggplot(aes(x=reorder(agrupador, -doacoes) , y=doacoes, fill=bol_status_eleito, label = efetividade_texto)) + 
-  geom_bar(stat = "identity") + #, fill= c("#406fef", "#ffb959"), colour= "#406fef") +
-  geom_text(size = 3, vjust= -.5, check_overlap = TRUE) +
+  geom_bar(stat = "identity") + 
   theme_tb(base_family = "Helvetica" , legend_size = 8) +
-  ylab("Efetividade em milhões") + xlab("") +
+  ylab("Doações em milhões") + xlab("") +
   scale_y_continuous(labels = real_format()) 
 
-chart4_main <- df3_main %>%
+chart3_main <- chart3_main + annotate("text", x = 1:6, y = c(50, 6, 3, 3, 3, 3), label = c("67%", "71%", "80%", "84%", "85%", "88%"))
+
+chart3_main <- chart3_main + scale_fill_manual(values = c("#406fef", "#ffb959"))
+
+setwd("C:/Users/mgaldino/2016/ACT/charts")
+ggsave("grafico3_main.bmp", chart3_main, scale=.5, height = 8, width = 12, family="Helvetica" )
+
+df4_main <- candidatos_fav %>%
   filter(Cargo == "Senador") %>%
+  mutate(bol_status_eleito = 
+           ifelse(bol_status_eleito == "eleito", "Senadores Eleitos", "Senadores não eleitos")) %>%
+  group_by(Cargo, agrupador, bol_status_eleito) %>%
+  summarise(doacoes = sum(Valor.receita)/1e6) %>%
+  ungroup() %>%
+  mutate(efetividade_texto = 
+           gsub( "\\.", "," , as.character(round(doacoes, 1))))
+
+
+df4_annotate <- df4_main %>%
+  select(c(2,3, 4)) %>%
+  spread(bol_status_eleito, doacoes) %>%
+  mutate( total = `Senadores Eleitos` + `Senadores não eleitos`,
+          perc = round(`Senadores Eleitos` / total, 2))
+
+df4_annotate[is.na(df4_annotate)] <- 0
+
+chart4_main <- df4_main %>%
   ggplot(aes(x=reorder(agrupador, -doacoes) , y=doacoes, fill=bol_status_eleito, label = efetividade_texto)) + 
-  geom_bar(stat = "identity") + #, fill= "#406fef", colour= "#406fef") +
-  geom_text(size = 3, vjust= -1, check_overlap = F) +
+  geom_bar(stat = "identity") +
   theme_tb(base_family = "Helvetica" , legend_size = 8) +
-  ylab("Efetividade em milhões") + xlab("") +
+  ylab("Doações em milhões") + xlab("") +
   scale_y_continuous(labels = real_format()) 
+
+chart4_main <- chart4_main + scale_fill_manual(values = c("#406fef", "#ffb959")) +
+  annotate("text", x = 1:6, y = c(10, 1, 1, 1, 1, 1), label = c("52%", "40%", "58%", "98%", "63%", "100%"))
+
+setwd("C:/Users/mgaldino/2016/ACT/charts")
+ggsave("grafico4_main.bmp", chart4_main, scale=.5, height = 8, width = 12, family="Helvetica" )
+
 
 
 #### Chart 5  e tabela 4 distribution of donoations
