@@ -318,12 +318,14 @@ df5 <- candidatos_fav %>%
 
 chart5_v2 <- df5 %>%
   ggplot(aes(x= decile , y=receita_milhoes)) + 
-  stat_summary(fun.y=mean, geom="bar") +
-  scale_x_continuous(breaks= seq(1, 10, 2)+1)  +
+  stat_summary(fun.y=mean, geom="bar", fill = "#406fef") +
+  scale_x_continuous(breaks= seq(1, 10, 4), labels = c("10%", "50%", "90%"))  +
   facet_grid(. ~ agrupador, scales = "free_y")  +
-  theme_tb(base_family = "Helvetica" , legend_size = 8) + ylab("Doação média por decil em R$ milhões") + xlab("decil")
+  theme_tb(base_family = "Helvetica" , legend_size = 8) + ylab("Doação média por decil em milhões") + xlab("decil")
 
-ggsave("grafico5_decil_v3.bmp", chart5_v2, scale=.8, height = 8, width = 12, family="Helvetica" )
+chart5_v2 <- chart5_v2 + scale_y_continuous(labels = real_format()) 
+
+ggsave("grafico5_decil_v3.bmp", chart5_v2, scale=.6, height = 8, width = 12, family="Helvetica" )
 
 ### Tabela 5 5 DEPUTADOS FEDERAIS MAIS BENEFICIADOS COM DOAÇÕES DE CAMPANHAR POR GRUPOS ALIMENTÍCIOS 
 
