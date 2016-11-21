@@ -84,6 +84,21 @@ doadores_2014_full_bg <- doadores_2014_full %>%
 ### Gráficos Tabelas do doc
 ######################################
 
+#### Tabela 1 - empresas que doaram
+
+tab1 <- doadores_2014_full %>%
+  filter(!is.na(agrupador)) %>%
+  mutate(doacao_congreso = ifelse(Cargo %in% c("Deputado Federal", "Senador"), 1, 0)) %>%
+  group_by(Nome, agrupador, CNPJ) %>%
+  summarise(doacoes_todos_cargos = sum(Valor.receita), doacao_congreso = max(doacao_congreso)) %>%
+  arrange(agrupador, Nome)
+
+View(tab1)
+
+setwd("C:/Users/mgaldino/2016/ACT/tabelas")
+write.table(tab1, file="tabela_1.csv", sep=";", row.names=F, dec=",")
+
+
 setwd("C:/Users/mgaldino/2016/ACT/charts")
 
 ### Gráfico 1
@@ -213,15 +228,27 @@ df_chart3 <- df2_1 %>%
          efetividade_texto = 
            paste(gsub( "\\.", "," , as.character(100*round(efetividade, 2))), "%", sep="")) %>%
   slice(-(7:8)) %>%
-  mutate(cargo = "Deputado Federal")
+  mutate(cargo = "Deputado Federal") %>%
+  dplyr::rename(favorecidos = dep_favorecidos,
+                eleitos = dep_eleitos)
 
-df_chart3_alt <- bind_rows(df_chart3,
+df_chart3_sen <- df3_1 %>%
+  mutate(efetividade = sen_eleitos/sen_favorecidos,
+         efetividade_texto = 
+           paste(gsub( "\\.", "," , as.character(100*round(efetividade, 2))), "%", sep="")) %>%
+  slice(-(7:8)) %>%
+  mutate(cargo = "Senador") %>%
+  dplyr::rename(favorecidos = sen_favorecidos,
+                eleitos = sen_eleitos)
+
+df_chart3_alt <- bind_rows(df_chart3, df_chart3_sen)
+                           
 df3_1 %>%
   mutate(efetividade = sen_eleitos/sen_favorecidos,
          efetividade_texto = 
            paste(gsub( "\\.", "," , as.character(100*round(efetividade, 2))), "%", sep="")) %>%
   slice(-(7:8)) %>%
-  mutate(cargo = "Senador"))
+  mutate(cargo = "Senador")
 
 chart3_alternativo <- df_chart3_alt %>%
   ggplot(aes(x=reorder(agrupador, -efetividade) , y=efetividade, label = efetividade_texto)) + 
@@ -330,7 +357,7 @@ ggsave("grafico5_decil_v3.bmp", chart5_v2, scale=.6, height = 8, width = 12, fam
 ### Tabela 5 5 DEPUTADOS FEDERAIS MAIS BENEFICIADOS COM DOAÇÕES DE CAMPANHAR POR GRUPOS ALIMENTÍCIOS 
 
 df_tab5 <-  candidatos_fav %>%
-  filter(bol_status_eleito == "eleito") %>%
+  filter(bol_status_eleito == "eleito", Cargo == "Deputado Federal") %>%
   group_by(CPF.do.candidato, SIGLA_PARTIDO, SIGLA_UE, Nome.candidato, agrupador) %>%
   summarise(receita = sum(Valor.receita),
             receita_milhoes = round(receita/1e6, 2)) %>%
@@ -355,7 +382,34 @@ df_tab5_final <- df_tab5 %>%
 
 setwd("C:/Users/mgaldino/2016/ACT/tabelas")
 
-write.table(df_tab5_final, file="tabela_5.csv", sep=";", row.names=F)
+write.table(df_tab5_final, file="tabela_5.csv", sep=";", row.names=F, dec=",")
+
+
+### Tabela 6 SENADORES MAIS BENEFICIADOS COM DOAÇÕES DE CAMPANHAR POR GRUPOS ALIMENTÍCIOS 
+
+df_tab6_sen <-  candidatos_fav %>%
+  filter(bol_status_eleito == "eleito", Cargo == "Senador") %>%
+  group_by(CPF.do.candidato, SIGLA_PARTIDO, SIGLA_UE, Nome.candidato, agrupador) %>%
+  summarise(receita = sum(Valor.receita),
+            receita_milhoes = round(receita/1e6, 2)) %>%
+  ungroup() %>%
+  group_by(agrupador) %>%
+  mutate(q3 = quantile(receita, .75),
+         q1 = quantile(receita, .25),
+         outlier_status = ifelse(receita > q3 + 1.5*(q3-q1), "outlier", "normal")) %>%
+  filter(outlier_status == "outlier") %>%
+  select(1, 5, 4, 2, 3, 6)
+
+# doações totais dos favorecidos
+
+
+df_tab6_final <- df_tab6_sen %>%
+  inner_join(candidatos_fav_all, by="CPF.do.candidato")
+
+setwd("C:/Users/mgaldino/2016/ACT/tabelas")
+
+write.table(df_tab6_final, file="tabela_6_senadores.csv", sep=";", row.names=F, dec=",")
+
 
 
 ## Tabela 7 Hugo
@@ -391,6 +445,91 @@ df_jessica$agrupador[is.na(df_jessica$agrupador)] <- "outras doações"
 
 setwd("C:/Users/mgaldino/2016/ACT/tabelas")
 write.table(df_jessica, file="tabela2014_jessica.csv", sep=";", row.names=F)
+
+## tabela favorecidos brf
+
+tab_fav <- candidatos_fav %>%
+  group_by(CPF.do.candidato, SIGLA_PARTIDO, SIGLA_UE, Nome.candidato, agrupador, Cargo) %>%
+  summarise(receita = sum(Valor.receita),
+            receita_milhoes = round(receita/1e6, 2)) %>%
+  filter(agrupador %in% c("Coca-Cola", "BRF"), Cargo %in% c("Deputado Federal", "Senador"))
+  
+tab_fav1 <- tab_fav %>%
+  group_by(agrupador, Cargo) %>%
+  top_n(n = 3, wt = receita)
+
+View(tab_fav1)  
+
+setwd("C:/Users/mgaldino/2016/ACT/tabelas")
+write.table(tab_fav1, file="tabela_top_brf_coca.csv", sep=";", row.names=F)
+
+
+
+### Tabela JU efetividade total do setor
+
+df3_main %>%
+  group_by(bol_status_eleito) %>%
+  summarise(total = sum(doacoes)) %>%
+  spread(bol_status_eleito, total) %>%
+  mutate( total = `Deputados Eleitos` + `Deputados não eleitos`,
+          efetividade = round(`Deputados Eleitos`/total, 4))
+
+df4_main %>%
+  group_by(bol_status_eleito) %>%
+  summarise(total = sum(doacoes)) %>%
+  spread(bol_status_eleito, total) %>%
+  mutate( total = `Senadores Eleitos` + `Senadores não eleitos`,
+          efetividade = round(`Senadores Eleitos`/total, 4))
+
+################
+## números gerais
+#################
+
+doadores_2014_full %>%
+  group_by(agrupador) %>%
+  summarise(total = sum(Valor.receita)) %>%
+  ungroup() %>%
+  mutate(grupo = !is.na(agrupador)) %>%
+  group_by(grupo) %>%
+  summarise(sum(total))
+
+## doações das empresas pro congresso (soma o True)
+doadores_2014_full %>%
+  group_by(agrupador, Cargo) %>%
+  summarise(total = sum(Valor.receita)) %>%
+  ungroup() %>%
+  mutate(grupo = !is.na(agrupador)) %>%
+  filter(Cargo %in% c("Deputado Federal", "Senador")) %>%
+  group_by(grupo, Cargo) %>%
+  summarise(sum(total))
+
+
+## Total da JBS pra todos os cargos
+doadores_2014_full %>%
+  filter( agrupador == "JBS") %>%
+  summarise(total = sum(Valor.receita))
+
+## total JBS pro congresso
+doadores_2014_full %>%
+  filter( agrupador == "JBS", Cargo %in% c("Deputado Federal", "Senador")) %>%
+  summarise(total = sum(Valor.receita))
+
+## lista deputados e senadores eleitos beneficiados
+
+lista_beneficiados_eleitos <- candidatos_fav %>%
+  filter( !is.na(agrupador), Cargo %in% c("Deputado Federal", "Senador"),
+          DESC_SIT_TOT_TURNO %in% c("ELEITO POR MÉDIA", "ELEITO POR QP", "ELEITO" )) %>%
+  group_by(CPF.do.candidato, Nome.candidato, Sigla..Partido, UF, Cargo, agrupador) %>%
+  summarise(doacoes = sum(Valor.receita))
+
+setwd("C:/Users/mgaldino/2016/ACT/tabelas")
+write.table(lista_beneficiados_eleitos, file="tabela_beneficiados_eleitos_congresso_v2.csv",
+            sep=";", row.names=F, dec=",")
+
+dim(lista_beneficiados_eleitos)
+head(lista_beneficiados_eleitos)
+
+length(unique(lista_beneficiados_eleitos$CPF.do.candidato))
 
 
 
