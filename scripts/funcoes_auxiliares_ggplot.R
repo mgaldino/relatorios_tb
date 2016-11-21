@@ -1,3 +1,4 @@
+
 real_format <- function(prefix = "$", suffix = "", largest_with_cents = 100000,
                         ..., big.mark = ".", negative_parens = FALSE) {
   require(reshape)
@@ -7,13 +8,13 @@ real_format <- function(prefix = "$", suffix = "", largest_with_cents = 100000,
     x <- round_any(x, 0.01)
     if (max(x, na.rm = TRUE) < largest_with_cents &
         !all(x == floor(x), na.rm = TRUE)) {
-      nsmall <- 2L
+      nsmall <- 1L
     } else {
       x <- round_any(x, 1)
       nsmall <- 0L
     }
     str_c("R$ ", format(x, nsmall = nsmall, trim = TRUE, big.mark = ".", 
-                      decimal.mark = ",", scientific = FALSE, digits=1L))
+                      decimal.mark = ",", scientific = FALSE, digits= 1L)) # alternativa 1L
   }
 }
 
