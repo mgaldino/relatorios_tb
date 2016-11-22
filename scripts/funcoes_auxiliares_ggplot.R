@@ -1,3 +1,4 @@
+## funções auziliares GGPLOT
 
 real_format <- function(prefix = "$", suffix = "", largest_with_cents = 100000,
                         ..., big.mark = ".", negative_parens = FALSE) {
