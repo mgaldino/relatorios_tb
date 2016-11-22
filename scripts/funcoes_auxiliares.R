@@ -1,3 +1,6 @@
+# ajustes em funções do pacto ElectionsBR
+## importar banco com colunas como character
+
 candidate_fed1 <- function (year) 
 {
   test_fed_year(year)
