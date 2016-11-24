@@ -327,32 +327,37 @@ setwd("C:/Users/mgaldino/2016/ACT/charts")
 ggsave("grafico4_main.bmp", chart4_main, scale=.5, height = 8, width = 12, family="Helvetica" )
 
 
-
 #### Chart 5  e tabela 4 distribution of donoations
-df5 <- candidatos_fav %>%
-  filter(bol_status_eleito == "eleito") %>%
+## deputados primeiro
+
+df5_sen <- candidatos_fav %>%
+  filter(bol_status_eleito == "eleito", Cargo == "Senador") %>%
   group_by(CPF.do.candidato, agrupador) %>%
   summarise(receita = sum(Valor.receita),
             receita_milhoes = round(receita/1e6, 2)) %>%
   ungroup() %>%
   group_by(agrupador) %>%
-  mutate( decile = ntile(receita, 10),
+  mutate( quartil = ntile(receita, 4),
           total_doado = sum(receita)) %>%
   ungroup() %>%
   mutate(agrupador = reorder(agrupador, total_doado)) 
           
-
-
-chart5_v2 <- df5 %>%
-  ggplot(aes(x= decile , y=receita_milhoes)) + 
+View(df5_sen)
+chart5_v2_sen <- df5_sen %>%
+  filter(agrupador != "McDonald's") %>%
+  ggplot(aes(x= quartil , y=receita_milhoes)) + 
   stat_summary(fun.y=mean, geom="bar", fill = "#406fef") +
-  scale_x_continuous(breaks= seq(1, 10, 4), labels = c("10%", "50%", "90%"))  +
+  scale_x_continuous(breaks= c(1,2,3,4), labels = c("25%", "50%", "75%", "100%"))  +
   facet_grid(. ~ agrupador, scales = "free_y")  +
-  theme_tb(base_family = "Helvetica" , legend_size = 8) + ylab("Doação média por decil em milhões") + xlab("decil")
+  theme_tb(base_family = "Helvetica" , legend_size = 8) + ylab("Doação média por decil em milhões") + xlab("quartil")
 
-chart5_v2 <- chart5_v2 + scale_y_continuous(labels = real_format()) 
+chart5_v2_sen <- chart5_v2_sen + scale_y_continuous(labels = real_format()) 
 
-ggsave("grafico5_decil_v3.bmp", chart5_v2, scale=.6, height = 8, width = 12, family="Helvetica" )
+ggsave("grafico5_decil_senador.bmp", chart5_v2_sen, scale=.6, height = 8, width = 12, family="Helvetica" )
+
+
+### Senadores
+
 
 ### Tabela 5 5 DEPUTADOS FEDERAIS MAIS BENEFICIADOS COM DOAÇÕES DE CAMPANHAR POR GRUPOS ALIMENTÍCIOS 
 
@@ -531,5 +536,34 @@ head(lista_beneficiados_eleitos)
 
 length(unique(lista_beneficiados_eleitos$CPF.do.candidato))
 
+
+### 
+doacoes_eleitos <- doadores_2014_full_bg %>%
+  mutate(bol_status_eleito = 
+           ifelse(DESC_SIT_TOT_TURNO %in% c( "ELEITO POR QP", "ELEITO POR MÉDIA", "ELEITO"), 
+                  "eleito", "nao_eleito")) %>%
+  filter(bol_status_eleito == "eleito") %>%
+  group_by(CPF.do.candidato, SIGLA_PARTIDO, SIGLA_UE, Nome.candidato, agrupador, Cargo) %>%
+  summarise(receita = sum(Valor.receita)) %>%
+  filter(Cargo %in% c("Deputado Federal", "Senador"))
+
+head(doacoes_eleitos)
+
+doacoes_eleitos1 <- doacoes_eleitos %>%
+  ungroup() %>%
+  mutate(agrupador = ifelse(is.na(agrupador), "outros", agrupador)) %>%
+  spread(agrupador, receita, fill = 0) %>%
+  mutate(doacoes_empresas_act = ABIR + Ambev + BRF+ `Coca-Cola` + JBS + `McDonald's`,
+         doacoes_todas_empresas_e_pf = doacoes_empresas_act + outros) %>%
+  mutate(perc_doacoes_alimentos = doacoes_empresas_act/doacoes_todas_empresas_e_pf) %>%
+  select(-c(13,15)) %>%
+  gather(key = doadores, value = doacoes,  ABIR, Ambev, BRF, JBS, `Coca-Cola`, `McDonald's`, outros) %>%
+  group_by(CPF.do.candidato) %>%
+  mutate(doacoes_totais = max(doacoes_todas_empresas_e_pf),
+         perc = doacoes/doacoes_todas_empresas_e_pf)
+
+setwd("C:/Users/mgaldino/2016/ACT/tabelas")
+write.table(doacoes_eleitos1, file="tabela_doacoes_totais_eleitos.csv",
+            sep=";", row.names=F, dec=",")
 
 
